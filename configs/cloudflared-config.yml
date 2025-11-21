@@ -1,0 +1,17 @@
+# Cloudflare Tunnel Configuration
+# Replace YOUR_TUNNEL_ID with actual tunnel ID from: cloudflared tunnel create
+
+tunnel: YOUR_TUNNEL_ID
+credentials-file: /etc/cloudflared/YOUR_TUNNEL_ID.json
+
+ingress:
+  # Route VPN domain to Xray container
+  - hostname: vpn.example.com
+    service: https://localhost:8443
+    originServerName: vpn.example.com
+    originRequest:
+      httpHostHeader: vpn.example.com
+      noTLSVerify: false
+  
+  # Catch-all rule (required)
+  - service: http_status:404

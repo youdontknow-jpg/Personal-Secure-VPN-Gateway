@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  xray:
+    image: teddysun/xray:latest
+    container_name: xray
+    restart: unless-stopped
+    
+    # Port mapping: only expose to localhost
+    ports:
+      - "127.0.0.1:8443:8443"
+    
+    # Mount configuration and certificates
+    volumes:
+      - /etc/xray/config.json:/etc/xray/config.json:ro
+      - /usr/local/etc/xray/certs:/usr/local/etc/xray/certs:ro
+    
+    # Optional: Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    networks:
+      - vpn-network
+
+networks:
+  vpn-network:
+    driver: bridge
