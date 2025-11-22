@@ -7,15 +7,15 @@ Real issues encountered during 3+ months of operation and how I solved them.
 ## Issue 1: DNS Migration from DuckDNS to Namecheap Domain
 
 ### Timeline
-- **July 22, 2025**: Started with DuckDNS (fujilegend.duckdns.org)
+- **July 22, 2025**: Started with DuckDNS (example.duckdns.org)
 - **July 28, 2025**: DNS resolution became unreliable
-- **July 29, 2025 01:42**: Migrated to vpn.fujilegend.xyz
+- **July 29, 2025 01:42**: Migrated to vpn.example.com
 
 ### Symptoms
 DNS response was very slow (500ms+) or timing out completely. Client devices couldn't connect to VPN even though server-side services (Xray, Cloudflare Tunnel) were running normally.
 
 ```bash
-dig fujilegend.duckdns.org
+dig example.duckdns.org
 # Response time: 536ms (should be <50ms)
 # Sometimes: SERVFAIL or timeout
 ```
@@ -34,14 +34,14 @@ Purchased domain from Namecheap (~$10/year) and moved DNS management to Cloudfla
 
 ```bash
 # Check DNS propagation
-dig vpn.fujilegend.xyz
+dig vpn.example.com
 
 # Expected output:
 # ANSWER SECTION:
-# vpn.fujilegend.xyz. 300 IN A <Cloudflare-IP>
+# vpn.example.com. 300 IN A <Cloudflare-IP>
 
 # Reissue certificate
-acme.sh --issue --dns dns_cf -d vpn.fujilegend.xyz
+acme.sh --issue --dns dns_cf -d vpn.example.com
 ```
 
 Time spent debugging: about 24 hours (including waiting for DNS propagation and hoping it was temporary)
@@ -49,8 +49,8 @@ Time spent debugging: about 24 hours (including waiting for DNS propagation and 
 ### Evidence
 ```bash
 ls -la ~/.acme.sh/
-# fujilegend.duckdns.org_ecc  - 2025-07-22 00:56:29
-# vpn.fujilegend.xyz_ecc      - 2025-07-29 01:42:32
+# example.duckdns.org_ecc  - 2025-07-22 00:56:29
+# vpn.example.com_ecc      - 2025-07-29 01:42:32
 ```
 These timestamps show the 7-day period I used DuckDNS before migrating.
 
@@ -129,7 +129,7 @@ Also learned that Docker restart policies are both helpful (auto-retry) and dang
 After switching from DuckDNS to new domain, Cloudflare Tunnel status showed INACTIVE. The tunnel existed but couldn't establish connection.
 
 ```bash
-cloudflared tunnel info fujitsu-vpn
+cloudflared tunnel info my-vpn-tunnel
 # Output: Status: INACTIVE
 ```
 
@@ -144,7 +144,7 @@ Backed up old credentials and generated new token:
 cp ~/.cloudflared/cert.pem ~/.cloudflared/cert.pem.bak
 
 # Generate new token
-cloudflared tunnel token fujitsu-vpn
+cloudflared tunnel token my-vpn-tunnel
 
 # Update config
 sudo vim /etc/cloudflared/config.yml
@@ -154,7 +154,7 @@ sudo vim /etc/cloudflared/config.yml
 sudo systemctl restart cloudflared
 
 # Verify
-cloudflared tunnel info fujitsu-vpn
+cloudflared tunnel info my-vpn-tunnel
 # Output: Status: ACTIVE
 ```
 
@@ -287,7 +287,7 @@ docker ps | grep xray
 docker logs xray --tail 50
 
 # Connectivity test
-curl -I https://vpn.fujilegend.xyz
+curl -I https://vpn.example.com
 
 # Certificate check
 openssl x509 -in /usr/local/etc/xray/certs/fullchain.cer -noout -dates
@@ -315,15 +315,15 @@ When something breaks, start with these commands. They catch 90% of issues.
 ## 問題1：DuckDNSからNamecheapドメインへのDNS移行
 
 ### 経緯
-- **2025年7月22日**：DuckDNS（fujilegend.duckdns.org）で開始
+- **2025年7月22日**：DuckDNS（example.duckdns.org）で開始
 - **2025年7月28日**：DNS解決が不安定になる
-- **2025年7月29日 01:42**：vpn.fujilegend.xyzへ移行
+- **2025年7月29日 01:42**：vpn.example.comへ移行
 
 ### 症状
 DNSレスポンスが非常に遅い（500ms以上）か、完全にタイムアウト。サーバー側のサービス（Xray、Cloudflare Tunnel）は正常に動作しているのに、クライアント端末からVPNに接続できない状態。
 
 ```bash
-dig fujilegend.duckdns.org
+dig example.duckdns.org
 # レスポンス時間: 536ms（50ms以下であるべき）
 # 時々: SERVFAILまたはタイムアウト
 ```
@@ -342,14 +342,14 @@ Namecheapでドメインを購入（年間約10ドル）し、DNS管理をCloudf
 
 ```bash
 # DNS伝播を確認
-dig vpn.fujilegend.xyz
+dig vpn.example.com
 
 # 期待される出力:
 # ANSWER SECTION:
-# vpn.fujilegend.xyz. 300 IN A <Cloudflare-IP>
+# vpn.example.com. 300 IN A <Cloudflare-IP>
 
 # 証明書を再発行
-acme.sh --issue --dns dns_cf -d vpn.fujilegend.xyz
+acme.sh --issue --dns dns_cf -d vpn.example.com
 ```
 
 デバッグにかかった時間：約24時間（DNS伝播待ちと、一時的な問題かもしれないという期待を含む）
@@ -357,8 +357,8 @@ acme.sh --issue --dns dns_cf -d vpn.fujilegend.xyz
 ### 証拠
 ```bash
 ls -la ~/.acme.sh/
-# fujilegend.duckdns.org_ecc  - 2025-07-22 00:56:29
-# vpn.fujilegend.xyz_ecc      - 2025-07-29 01:42:32
+# example.duckdns.org_ecc  - 2025-07-22 00:56:29
+# vpn.example.com_ecc      - 2025-07-29 01:42:32
 ```
 これらのタイムスタンプは、移行前にDuckDNSを使用していた7日間を示している。
 
@@ -437,7 +437,7 @@ jq . /etc/xray/config.json
 DuckDNSから新しいドメインに切り替えた後、Cloudflare TunnelのステータスがINACTIVEと表示。トンネルは存在するが接続を確立できない。
 
 ```bash
-cloudflared tunnel info fujitsu-vpn
+cloudflared tunnel info my-vpn-tunnel
 # 出力: Status: INACTIVE
 ```
 
@@ -452,7 +452,7 @@ DNS変更により、トンネル認証トークンの再生成が必要にな�
 cp ~/.cloudflared/cert.pem ~/.cloudflared/cert.pem.bak
 
 # 新しいトークンを生成
-cloudflared tunnel token fujitsu-vpn
+cloudflared tunnel token my-vpn-tunnel
 
 # 設定を更新
 sudo vim /etc/cloudflared/config.yml
@@ -462,7 +462,7 @@ sudo vim /etc/cloudflared/config.yml
 sudo systemctl restart cloudflared
 
 # 確認
-cloudflared tunnel info fujitsu-vpn
+cloudflared tunnel info my-vpn-tunnel
 # 出力: Status: ACTIVE
 ```
 
@@ -595,7 +595,7 @@ docker ps | grep xray
 docker logs xray --tail 50
 
 # 接続テスト
-curl -I https://vpn.fujilegend.xyz
+curl -I https://vpn.example.com
 
 # 証明書チェック
 openssl x509 -in /usr/local/etc/xray/certs/fullchain.cer -noout -dates
