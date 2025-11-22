@@ -11,15 +11,15 @@ Reflection on 3+ months of building and running a production VPN. This wasn't ju
 **Before this project:**
 - "VPNs encrypt traffic, that's all I need to know"
 - Thought WireGuard was the best option for everything
-- Didn't understand why some VPNs get blocked
+- Didn't really understand how some VPNs get blocked
 
 **After 3 months:**
 - Realized encryption alone isn't enough – protocols have fingerprints
-- Learned how DPI (Deep Packet Inspection) actually works
+- Learned how DPI (Deep Packet Inspection) actually works and its usefulness
 - Understand the cat-and-mouse game between censorship and circumvention
 
 **The "aha!" moment:**
-Was testing WireGuard in a restrictive network. Got blocked within 24 hours. Spent a whole weekend reading about protocol fingerprinting and discovered WebSocket obfuscation. That's when I understood – it's not about *how* you encrypt, it's about *how you hide* what you're doing.
+Was testing WireGuard in a restrictive network. Got blocked within 24 hours. Spent a whole weekend reading about protocol fingerprinting and discovered WebSocket obfuscation. That's when I understood – it's not about *how* you encrypt, it's about *how you hide* what you're doing. Can't win at a country-level security (ofc).
 
 **Practical knowledge:**
 - WebSocket over TLS makes VPN traffic look like a web app
@@ -36,7 +36,7 @@ Was testing WireGuard in a restrictive network. Got blocked within 24 hours. Spe
 
 **Reality check:**
 It's way more complex than that. Spent hours reading docs to understand:
-- How Anycast routing works (still don't fully get it, honestly)
+- How Anycast routing works (still don't fully remember honestly)
 - Why tunnel connections are outbound-only (security genius)
 - How edge termination differs from traditional proxy
 
