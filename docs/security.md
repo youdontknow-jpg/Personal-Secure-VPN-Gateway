@@ -310,7 +310,6 @@ This is a learning project. I'm aware of these security limitations:
 **Honest assessment of priorities:**
 
 1. **Learning approach:**
-   - Currently studying for CCNA - networking fundamentals first
    - Want to understand Zero-Trust principles properly before building more of it
    - Building knowledge foundation before complex implementations
 
