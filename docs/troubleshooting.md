@@ -331,8 +331,8 @@ Verified afterwards: cloudflared `active` and `enabled`, Xray restart policy `un
 5. **Keep a way in when remote access is gone.** The server's LAN IP and username should be written down somewhere other than the server - I had to dig them out of `~/.ssh/config` and shell history.
 
 ### Follow-up
-- [ ] Send acme.sh cron output to a log file and remove the duplicate cron entry
-- [ ] Remove the stale DuckDNS entry from acme.sh
+- [x] Send acme.sh cron output to a log file and remove the duplicate cron entry
+- [x] Remove the stale DuckDNS entry from acme.sh
 - [ ] Certificate expiry alert - still the most important missing piece
 - [ ] Look for other leftovers from the old multi-service setup (e.g. `/usr/bin/xray`)
 
@@ -795,8 +795,8 @@ sudo openssl x509 -in /usr/local/etc/xray/certs/fullchain.cer -noout -enddate
 5. **リモートアクセスを失った時の入口を確保する。** サーバーのLAN IPとユーザー名はサーバー以外の場所に記録しておくべき - 今回は `~/.ssh/config` とシェル履歴から掘り出した。
 
 ### 今後の対応
-- [ ] acme.shのcron出力をログファイルに残し、重複したcronエントリを削除
-- [ ] acme.shから古いDuckDNSのエントリを削除
+- [x] acme.shのcron出力をログファイルに残し、重複したcronエントリを削除
+- [x] acme.shから古いDuckDNSのエントリを削除
 - [ ] 証明書期限アラート - 依然として最も重要な欠落
 - [ ] 旧マルチサービス構成の他の残骸を探す（例：`/usr/bin/xray`）
 
