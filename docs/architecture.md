@@ -20,6 +20,8 @@ Docker Container: Xray (port 8443)
 Home Network (file server, media, services)
 ```
 
+Admin access uses the same tunnel: `ssh` → Cloudflare Access (Google login + 2FA) → Cloudflare Tunnel → SSH on the server. No SSH port is exposed to the internet.
+
 ### Traffic Flow
 
 1. **Client connects** to Cloudflare domain via HTTPS
@@ -116,12 +118,13 @@ Traditional VPN installations:
 
 ### Layer 1: Network Perimeter
 
-- **UFW firewall** - Only essential ports (22, 80, 443) exposed to localhost
+- **UFW firewall** - Only essential ports (22, 80, 443) allowed, none forwarded on the home router
 - **Fail2Ban** - Automatic IP blocking after failed SSH attempts
 - **No internet-facing ports** - All VPN traffic via Cloudflare Tunnel
 
 ### Layer 2: Authentication
 
+- **Cloudflare Access** - Google login + 2FA in front of SSH
 - **UUID-based client auth** - Similar to API keys
 - **TLS certificate verification** - Prevents man-in-the-middle attacks
 - **Cloudflare credentials** - Stored securely, not in code
@@ -134,7 +137,7 @@ Traditional VPN installations:
 
 ### Layer 4: Container Isolation
 
-- **Limited privileges** - Container runs without root capabilities
+- **Default isolation** - Docker namespaces and seccomp (non-root user not configured yet)
 - **Read-only configs** - Configuration files mounted read-only
 - **Network namespace** - Separate from host network stack
 
@@ -188,7 +191,7 @@ Tested in:
 - Public WiFi with content filtering
 - Networks known to block VPN protocols
 
-**Result:** Successfully maintained connectivity in all tested environments over 3+ months.
+**Result:** Successfully maintained connectivity in all tested environments. (Outages so far came from server-side operations, not from blocking - see [Troubleshooting](troubleshooting.md).)
 
 ---
 
@@ -258,12 +261,13 @@ Tested in:
 ### Planned Improvements
 
 **Phase 1: Enhanced Monitoring**
+- Certificate expiry alerts (first priority)
 - Prometheus metrics collection
 - Grafana dashboards for traffic analysis
 - Automated alerting for anomalies
 
 **Phase 2: Access Control**
-- Cloudflare Access for identity-based auth
+- Extend Cloudflare Access (already in front of SSH) to other services
 - Per-service access policies with iptables
 - Separate VLANs for different access levels
 
@@ -281,10 +285,10 @@ Tested in:
 
 **Honest assessment:**
 
-1. **Learning priority** - Currently focused on Network+ certification (Dec 28, 2025)
-2. **Stability first** - Current setup proven stable over 3+ months
-3. **Understanding before complexity** - Want to master Zero-Trust principles before implementing
-4. **Risk management** - Avoiding changes during exam prep period
+1. **Learning priority** - Currently studying for CCNA
+2. **Basics first** - The 2026 outages came from missing alerts and incomplete cleanup, not missing features
+3. **Understanding before complexity** - Want to master Zero-Trust principles before implementing more
+4. **Risk management** - Every new component is another thing that can fail quietly
 
 This is a learning journey. Current architecture taught VPN fundamentals and anti-censorship techniques. Next phases will teach enterprise-grade security and high-availability systems.
 

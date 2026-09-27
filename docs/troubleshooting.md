@@ -186,7 +186,7 @@ Always think about component dependencies when making system changes. Backup eve
 ## Issue 4: Full VPN Outage - Expired Certificate + Broken Client
 
 ### Timeline
-**September 2026** - VPN became completely unusable. Two independent failures happened at the same time, which made the diagnosis much harder.
+**June 2026** - VPN became completely unusable. Two independent failures happened at the same time, which made the diagnosis much harder.
 
 ### Symptoms
 The macOS client (Hiddify) failed to start:
@@ -234,7 +234,7 @@ acme.sh --renew -d vpn.example.com --force
 # 3. Le_ReloadCmd restarts the container automatically
 #    (docker restart xray)
 ```
-Certificate renewed successfully and Xray picked it up.
+Certificate renewed successfully and Xray picked it up. Note: Let's Encrypt certificates are valid for 90 days, so this one ran until September 21, 2026 - which matters in [Issue 5](#issue-5-server-frozen-by-a-restart-loop-of-leftover-services).
 
 ### Security Hardening
 During the fix I realized the VPN UUID had once been accidentally posted in a chat app (the message was later deleted). **Deleting a message does not un-leak a secret**, so I rotated the UUID and invalidated the old one.
@@ -261,6 +261,80 @@ During the fix I realized the VPN UUID had once been accidentally posted in a ch
 - [ ] Certificate expiry check N days before expiration, with notification
 - [ ] Backup route that does not depend on Cloudflare (Xray Reality)
 - [ ] Move server credentials (tokens, UUID, SSH) into a password manager
+
+---
+
+## Issue 5: Server Frozen by a Restart Loop of Leftover Services
+
+### Timeline
+- **August 16, 2026**: last journal entry the server managed to write
+- **August 21, 2026**: scheduled certificate renewal failed - no trace, because cron output went to `/dev/null`
+- **September 21, 2026**: certificate expired
+- **September 27, 2026**: noticed while trying to SSH in; fixed the same day
+
+### Symptoms
+From the Mac:
+```
+$ ssh fujitsu
+websocket: bad handshake
+Connection closed by UNKNOWN port 65535
+```
+```bash
+curl -sI https://ssh.example.com | head -1   # HTTP/2 302
+curl -sI https://vpn.example.com | head -1   # HTTP/2 530
+```
+On the server's own console: an endless flood of `systemd-journald: Failed to write entry`. Typing was impossible - switching TTYs and Magic SysRq didn't help either.
+
+**Diagnostic trap:** the 302 on the SSH hostname looks healthy, but it means nothing - Cloudflare Access redirects to its login page *before* the request ever reaches the origin. The 530 on the VPN hostname (same tunnel) was the real signal: Cloudflare could not reach the server at all.
+
+### Recovery
+1. Hard power-off (long press), then GRUB → Advanced options → recovery mode
+2. Resumed normal boot - the server came back and SSH worked again
+
+### Root Cause
+The disk was fine (22% used, mounted read-write, no EXT4 or I/O errors). The previous boot's journal told the real story:
+```
+hiddify-haproxy.service: Scheduled restart job, restart counter is at 2060030.
+hiddify-nginx.service: Failed to locate executable /opt/hiddify-manager/nginx/pre-start.sh: No such file or directory
+hiddify-singbox.service: Failed to locate executable /opt/hiddify-manager/singbox/sing-box: No such file or directory
+```
+When I simplified the stack to Xray + Cloudflare Tunnel (see [Multi-System Integration Challenges](#multi-system-integration-challenges-october-november-2025)), I deleted the Hiddify Manager files but **not its systemd units**. Eight `hiddify-*` units stayed enabled, each failing and restarting about once per second - over 2 million restarts each. The journal grew to 3.9 GB, journald could no longer write, and the machine became unusable.
+
+The expired certificate was a second, related problem: the August 21 renewal failed while the server was in this state, and since the acme.sh cron job discarded all output, there was no record of why.
+
+### Solution
+```bash
+# 1. Disable leftover units and move them to a backup directory (not deleted)
+sudo systemctl disable --now $(systemctl list-unit-files 'hiddify*' --no-legend | awk '{print $1}')
+sudo mkdir -p /root/hiddify-units-backup
+sudo mv /etc/systemd/system/hiddify-* /root/hiddify-units-backup/
+sudo systemctl daemon-reload && sudo systemctl reset-failed
+
+# 2. Shrink the journal and cap its size
+sudo journalctl --vacuum-size=500M      # 3.9G -> 416M
+sudo mkdir -p /etc/systemd/journald.conf.d
+printf '[Journal]\nSystemMaxUse=500M\n' | sudo tee /etc/systemd/journald.conf.d/size.conf
+sudo systemctl restart systemd-journald
+
+# 3. Renew the certificate (acme.sh runs as the normal user, not root)
+~/.acme.sh/acme.sh --renew -d vpn.example.com --ecc --force
+sudo openssl x509 -in /usr/local/etc/xray/certs/fullchain.cer -noout -enddate
+# notAfter=Dec 26 2026
+```
+Verified afterwards: cloudflared `active` and `enabled`, Xray restart policy `unless-stopped`, VPN hostname no longer returns 530.
+
+### Learning
+1. **Removing software means removing its services.** Deleting the files left enabled systemd units behind, and they failed quietly for weeks. After uninstalling anything, check `systemctl list-unit-files`.
+2. **Unbounded logs can take down a whole machine.** One restart loop turned into gigabytes of journal. A log size limit is a safety feature, not housekeeping.
+3. **`> /dev/null` in a cron job hides failures.** The same "silent automation" lesson as Issue 4, found in a different place.
+4. **Know what each response actually proves.** A 302 from an Access-protected hostname says nothing about the origin; a 530 does.
+5. **Keep a way in when remote access is gone.** The server's LAN IP and username should be written down somewhere other than the server - I had to dig them out of `~/.ssh/config` and shell history.
+
+### Follow-up
+- [ ] Send acme.sh cron output to a log file and remove the duplicate cron entry
+- [ ] Remove the stale DuckDNS entry from acme.sh
+- [ ] Certificate expiry alert - still the most important missing piece
+- [ ] Look for other leftovers from the old multi-service setup (e.g. `/usr/bin/xray`)
 
 ---
 
@@ -312,7 +386,7 @@ Issues encountered:
 - Unclear which service was actually being used
 
 **Resolution**  
-Simplified to just Xray + Cloudflare Tunnel. Removed redundant services. Learned that more components = more complexity = more failure points.
+Simplified to just Xray + Cloudflare Tunnel. Removed redundant services - or so I thought. The Hiddify systemd units were left behind and eventually froze the server ([Issue 5](#issue-5-server-frozen-by-a-restart-loop-of-leftover-services)). Learned that more components = more complexity = more failure points.
 
 **Learning**: Keep it simple. Only add complexity when actually needed. Every additional component is a potential maintenance burden.
 
@@ -339,6 +413,7 @@ echo "$(date): [problem description]" >> ~/troubleshooting.log
 - Testing changes in staging before production
 
 ### Monitoring Setup
+- Journal size capped at 500M (after Issue 5)
 - Certificate expiration alerts (30 days before) - **planned, not yet in place.** Issue 4 happened exactly because renewal failed silently.
 - Cloudflare Tunnel health checks
 - Container restart count monitoring
@@ -575,7 +650,7 @@ DNS変更には連鎖的な影響がある - 証明書だけでなく認証ト�
 ## 問題4：VPN全面停止 - 証明書期限切れとクライアント破損
 
 ### タイムライン
-**2026年9月** - VPNが完全に使用不能に。2つの独立した障害が同時に発生し、原因の切り分けが非常に難しくなった。
+**2026年6月** - VPNが完全に使用不能に。2つの独立した障害が同時に発生し、原因の切り分けが非常に難しくなった。
 
 ### 症状
 macOSクライアント（Hiddify）が起動しない：
@@ -623,7 +698,7 @@ acme.sh --renew -d vpn.example.com --force
 # 3. Le_ReloadCmdによりコンテナが自動再起動
 #    (docker restart xray)
 ```
-証明書の更新に成功し、Xrayに反映された。
+証明書の更新に成功し、Xrayに反映された。注：Let's Encryptの証明書は90日間有効のため、この証明書は2026年9月21日まで - これが[問題5](#問題5残存サービスの再起動ループでサーバーが停止)に関わってくる。
 
 ### セキュリティ強化
 修正中に、VPNのUUIDを過去にチャットアプリへ誤って投稿していたことに気づいた（メッセージは後で削除済み）。**メッセージを削除しても漏洩はなかったことにならない**ため、UUIDをローテーションし、古いものを無効化した。
@@ -650,6 +725,80 @@ acme.sh --renew -d vpn.example.com --force
 - [ ] 証明書期限のN日前チェックと通知
 - [ ] Cloudflareに依存しないバックアップ経路（Xray Reality）
 - [ ] サーバー認証情報（トークン、UUID、SSH）をパスワードマネージャーに移行
+
+---
+
+## 問題5：残存サービスの再起動ループでサーバーが停止
+
+### タイムライン
+- **2026年8月16日**：サーバーが書き込めた最後のジャーナル
+- **2026年8月21日**：証明書の定期更新が失敗 - cronの出力が `/dev/null` に捨てられていたため記録なし
+- **2026年9月21日**：証明書の期限切れ
+- **2026年9月27日**：SSHしようとして発覚、同日中に復旧
+
+### 症状
+Macから：
+```
+$ ssh fujitsu
+websocket: bad handshake
+Connection closed by UNKNOWN port 65535
+```
+```bash
+curl -sI https://ssh.example.com | head -1   # HTTP/2 302
+curl -sI https://vpn.example.com | head -1   # HTTP/2 530
+```
+サーバー本体のコンソールには `systemd-journald: Failed to write entry` が延々と流れ続け、入力不能。TTY切り替えもMagic SysRqも効かなかった。
+
+**診断の落とし穴：** SSHホスト名の302は正常に見えるが、何の証明にもならない。Cloudflare Accessはリクエストがオリジンに届く*前に*ログインページへリダイレクトするため。同じトンネルを使うVPNホスト名の530こそが本当のシグナルだった：Cloudflareがサーバーにまったく到達できていない。
+
+### 復旧
+1. 電源長押しで強制終了し、GRUB → Advanced options → recovery mode
+2. 通常起動を再開 - サーバーが復帰し、SSHも使えるようになった
+
+### 根本原因
+ディスクは正常（使用率22%、読み書き可能でマウント、EXT4やI/Oエラーなし）。前回起動時のジャーナルが本当の原因を示していた：
+```
+hiddify-haproxy.service: Scheduled restart job, restart counter is at 2060030.
+hiddify-nginx.service: Failed to locate executable /opt/hiddify-manager/nginx/pre-start.sh: No such file or directory
+hiddify-singbox.service: Failed to locate executable /opt/hiddify-manager/singbox/sing-box: No such file or directory
+```
+構成をXray + Cloudflare Tunnelにシンプル化した際（[複数システム統合の課題](#複数システム統合の課題2025年10-11月)を参照）、Hiddify Managerのファイルは削除したが**systemdユニットは残っていた**。8つの `hiddify-*` ユニットが有効なまま、約1秒ごとに失敗と再起動を繰り返し、それぞれ200万回以上再起動。ジャーナルは3.9GBまで膨れ上がり、journaldが書き込めなくなり、マシンが使用不能になった。
+
+期限切れの証明書は、関連するもう一つの問題：8月21日の更新はサーバーがこの状態の間に失敗しており、acme.shのcronジョブが出力をすべて捨てていたため、原因の記録が残っていなかった。
+
+### 解決策
+```bash
+# 1. 残存ユニットを無効化し、バックアップディレクトリへ移動（削除はしない）
+sudo systemctl disable --now $(systemctl list-unit-files 'hiddify*' --no-legend | awk '{print $1}')
+sudo mkdir -p /root/hiddify-units-backup
+sudo mv /etc/systemd/system/hiddify-* /root/hiddify-units-backup/
+sudo systemctl daemon-reload && sudo systemctl reset-failed
+
+# 2. ジャーナルを縮小し、サイズ上限を設定
+sudo journalctl --vacuum-size=500M      # 3.9G -> 416M
+sudo mkdir -p /etc/systemd/journald.conf.d
+printf '[Journal]\nSystemMaxUse=500M\n' | sudo tee /etc/systemd/journald.conf.d/size.conf
+sudo systemctl restart systemd-journald
+
+# 3. 証明書を更新（acme.shはrootではなく通常ユーザーで動作）
+~/.acme.sh/acme.sh --renew -d vpn.example.com --ecc --force
+sudo openssl x509 -in /usr/local/etc/xray/certs/fullchain.cer -noout -enddate
+# notAfter=Dec 26 2026
+```
+復旧後に確認：cloudflaredは `active` かつ `enabled`、Xrayの再起動ポリシーは `unless-stopped`、VPNホスト名は530を返さなくなった。
+
+### 学んだこと
+1. **ソフトウェアの削除にはサービスの削除も含まれる。** ファイルだけ消して有効なsystemdユニットが残り、何週間も静かに失敗し続けた。何かをアンインストールしたら `systemctl list-unit-files` を確認する。
+2. **上限のないログはマシン全体を止めうる。** 一つの再起動ループが数GBのジャーナルになった。ログのサイズ上限は片付けではなく安全機能。
+3. **cronの `> /dev/null` は失敗を隠す。** 問題4と同じ「静かに失敗する自動化」の教訓を、別の場所で再発見。
+4. **各レスポンスが実際に何を証明するかを知る。** Access保護下のホスト名の302はオリジンについて何も語らない。530は語る。
+5. **リモートアクセスを失った時の入口を確保する。** サーバーのLAN IPとユーザー名はサーバー以外の場所に記録しておくべき - 今回は `~/.ssh/config` とシェル履歴から掘り出した。
+
+### 今後の対応
+- [ ] acme.shのcron出力をログファイルに残し、重複したcronエントリを削除
+- [ ] acme.shから古いDuckDNSのエントリを削除
+- [ ] 証明書期限アラート - 依然として最も重要な欠落
+- [ ] 旧マルチサービス構成の他の残骸を探す（例：`/usr/bin/xray`）
 
 ---
 
@@ -701,7 +850,7 @@ Cloudflare Tunnelがダウンすると、VPSの公開ポートが直接アクセ
 - どのサービスが実際に使用されているか不明
 
 **解決**  
-XrayとCloudflare Tunnelのみにシンプル化。冗長なサービスを削除。コンポーネントが多い = 複雑さが増す = 障害ポイントが増える、と学んだ。
+XrayとCloudflare Tunnelのみにシンプル化。冗長なサービスを削除 - したつもりだった。Hiddifyのsystemdユニットが残っており、最終的にサーバーを停止させた（[問題5](#問題5残存サービスの再起動ループでサーバーが停止)）。コンポーネントが多い = 複雑さが増す = 障害ポイントが増える、と学んだ。
 
 **学んだこと**：シンプルに保つ。実際に必要な場合のみ複雑さを追加。追加コンポーネントはすべて潜在的なメンテナンス負担。
 
@@ -728,6 +877,7 @@ echo "$(date): [問題の説明]" >> ~/troubleshooting.log
 - 本番環境への適用前にステージングでテスト
 
 ### 監視の設定
+- ジャーナルサイズを500Mに制限（問題5の後）
 - 証明書有効期限アラート（30日前） - **計画中、未導入。** 問題4はまさに更新が静かに失敗したことが原因。
 - Cloudflare Tunnelヘルスチェック
 - コンテナ再起動回数の監視
