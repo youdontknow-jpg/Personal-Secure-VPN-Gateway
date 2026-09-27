@@ -319,7 +319,6 @@ This is a learning project. I'm aware of these security limitations:
    - Alerts and cleanup matter more right now than new components
 
 3. **Time management:**
-   - Studying for CCNA alongside running this
    - Complex implementations need focused time
 
 4. **Risk management:**
