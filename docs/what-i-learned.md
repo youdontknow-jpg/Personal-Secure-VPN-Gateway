@@ -265,28 +265,19 @@ Had backups. Never tested restoring them. When I finally did (for practice), dis
 - Formal change management (just me doing things)
 - Advanced monitoring (basic health checks only)
 
-### Certifications Alignment
-
-**Security+ (later):**
-Directly relevant experience with:
-- Defense in depth
-- Cryptography (TLS)
-- Access control
-- Incident response (certificate expiration)
-
 ---
 
 ## What's Next
 
 ### Short-term (keeping it real)
 
-**While studying for CCNA:**
+**Right now:**
 - No major changes to VPN (stability > features)
-- Focus on exam preparation
+- Fix the basics first: certificate expiry alerts, cleaning up leftovers
 - Maybe add basic monitoring (if time permits)
 
 **Honest assessment:**
-I want to add Prometheus, Grafana, better access control, redundancy... but realistically, exam prep comes first. This project taught me that trying to do everything at once leads to nothing getting done properly.
+I want to add Prometheus, Grafana, better access control, redundancy... but realistically, time is limited. This project taught me that trying to do everything at once leads to nothing getting done properly.
 
 ---
 
@@ -544,13 +535,13 @@ WAF（Webアプリケーションファイアウォール）が自分のVPN接�
 
 ### 短期（現実的に）
 
-**CCNA学習中:**
+**現時点:**
 - VPNへの大きな変更なし（安定性 > 機能）
-- 試験準備に集中
+- まず基本を固める：証明書期限アラート、残骸の整理
 - 時間があれば基本的な監視を追加
 
 **正直な評価:**
-Prometheus、Grafana、より良いアクセス制御、冗長性を追加したい...しかし現実的には、試験準備が優先。このプロジェクトは、一度にすべてをやろうとすると何も適切に完了しないことを教えてくれた。
+Prometheus、Grafana、より良いアクセス制御、冗長性を追加したい...しかし現実的には、時間が限られている。このプロジェクトは、一度にすべてをやろうとすると何も適切に完了しないことを教えてくれた。
 
 ---
 
