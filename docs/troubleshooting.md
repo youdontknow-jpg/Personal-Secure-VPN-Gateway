@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Real issues encountered during 3+ months of operation and how I solved them.
+Real issues encountered while running this gateway and how I solved them.
 
 ---
 
@@ -165,11 +165,11 @@ Token comparison shows different values:
 ```bash
 # Old token (backed up):
 cat ~/.cloudflared/old_cred.json.bak
-# Token: x2H4mWhQ5DT4milyylOyuQ90...
+# Token: <redacted>
 
 # Current token:
 cat ~/.cloudflared/cert.pem
-# Token: P1I42eS8tYSSL3aoLAcPZJ_TB...
+# Token: <redacted>
 ```
 Backup files created at 2025-07-29 01:44:51.
 
@@ -180,6 +180,87 @@ DNS changes can have cascading effects - not just certificates but also authenti
 - Config file updates
 
 Always think about component dependencies when making system changes. Backup everything before major changes. Validate each step before moving to next.
+
+---
+
+## Issue 4: Full VPN Outage - Expired Certificate + Broken Client
+
+### Timeline
+**September 2026** - VPN became completely unusable. Two independent failures happened at the same time, which made the diagnosis much harder.
+
+### Symptoms
+The macOS client (Hiddify) failed to start:
+```
+failed to start core / no such file Working/configs/*.json
+127.0.0.1:59202 refused
+```
+On top of that, connections from other paths worked intermittently at best.
+
+### Root Cause
+**Failure 1 - Client: broken Hiddify build**
+The installed app was the Mac App Store Catalyst port (`apple.hiddify.com~iosmac`, labelled "Not verified for macOS"). macOS had cleaned up its compiled config cache, so the core could not start.
+
+**Failure 2 - Server: expired TLS certificate**
+Probing the service locally, bypassing the client completely:
+```bash
+curl -vk https://127.0.0.1:8443
+# expire date: <in the past>
+# HTTP/1.1 400 Bad Request
+# sec-websocket-version: 13
+```
+The certificate had expired, but the `sec-websocket-version: 13` header proved Xray itself was alive. That ruled out "the service is down" and pointed at the certificate layer.
+
+The real cause: the Cloudflare API token (`CF_Token`) that acme.sh uses for DNS validation had become invalid. **Auto-renewal had been failing silently** until the certificate finally expired.
+
+**Red herrings**
+- A leftover systemd-managed Xray service (disabled)
+- An orphaned `/usr/bin/xray` process
+
+For a while it was unclear which Xray was actually serving traffic. It turned out to be the Docker container; the redundant ones were removed.
+
+### Solution
+**Client:**
+```bash
+# Remove the App Store Catalyst version, install the official GitHub release (.dmg, v4.1.1)
+xattr -dr com.apple.quarantine /Applications/Hiddify.app
+```
+
+**Server:**
+```bash
+# 1. Create a new Cloudflare API token (Zone:DNS:Edit + Zone:Zone:Read)
+#    and update CF_Token for acme.sh
+# 2. Force renewal
+acme.sh --renew -d vpn.example.com --force
+# 3. Le_ReloadCmd restarts the container automatically
+#    (docker restart xray)
+```
+Certificate renewed successfully and Xray picked it up.
+
+### Security Hardening
+During the fix I realized the VPN UUID had once been accidentally posted in a chat app (the message was later deleted). **Deleting a message does not un-leak a secret**, so I rotated the UUID and invalidated the old one.
+
+### Result
+
+| Item | Before | After |
+|---|---|---|
+| Client | Catalyst port, core failed to start | Official GitHub release, working |
+| Server certificate | Expired | Renewed, auto-renewal restored |
+| Xray processes | Redundant / orphaned instances | Single instance (Docker container) |
+| VPN credential (UUID) | Previously exposed | Rotated |
+
+### Learning
+1. **Separate variables when two failures overlap.** Test client and server independently instead of assuming a single cause. `curl` against the local port cuts the client out of the picture.
+2. **Silent automation failures are the most dangerous.** acme.sh renewal failed with no alert at all. Automation needs alerting on failure, not just on success.
+3. **Leaked credentials must be rotated, not deleted.** Once exposure is suspected, rotation is the only reliable fix.
+4. **Distribution channel defines the trust boundary.** The same open-source client can be reliable from the official GitHub release and broken as a third-party App Store port - especially important for security tools.
+
+### Follow-up
+- [ ] Rotate the Cloudflare Tunnel token (credential hygiene)
+- [ ] Make sure Xray / cloudflared start on boot (`restart: unless-stopped` / `systemctl enable`)
+- [ ] Verify the acme.sh renewal cron runs cleanly with the new token
+- [ ] Certificate expiry check N days before expiration, with notification
+- [ ] Backup route that does not depend on Cloudflare (Xray Reality)
+- [ ] Move server credentials (tokens, UUID, SSH) into a password manager
 
 ---
 
@@ -258,7 +339,7 @@ echo "$(date): [problem description]" >> ~/troubleshooting.log
 - Testing changes in staging before production
 
 ### Monitoring Setup
-- Certificate expiration alerts (30 days before)
+- Certificate expiration alerts (30 days before) - **planned, not yet in place.** Issue 4 happened exactly because renewal failed silently.
 - Cloudflare Tunnel health checks
 - Container restart count monitoring
 - Weekly log review
@@ -269,7 +350,7 @@ echo "$(date): [problem description]" >> ~/troubleshooting.log
 
 The biggest lesson isn't any specific technical solution. It's that losing detailed logs taught me the importance of documentation.
 
-I encountered 30+ issues over 6 months, but only have complete evidence for 3. The others are lost to bash history limits and log rotation. This itself is a valuable lesson about production operations.
+I encountered 30+ issues in the first 6 months, but only have complete evidence for 3. The others are lost to bash history limits and log rotation. This itself is a valuable lesson about production operations.
 
 In future projects, I'll prioritize documentation from day one. Not just for others, but for "future me" who won't remember why things were done certain ways.
 
@@ -308,7 +389,7 @@ When something breaks, start with these commands. They catch 90% of issues.
 
 # トラブルシューティング
 
-3ヶ月以上の運用で実際に遭遇した問題とその解決方法の記録。
+このゲートウェイの運用中に実際に遭遇した問題とその解決方法の記録。
 
 ---
 
@@ -473,11 +554,11 @@ cloudflared tunnel info my-vpn-tunnel
 ```bash
 # 古いトークン（バックアップ済み）:
 cat ~/.cloudflared/old_cred.json.bak
-# Token: x2H4mWhQ5DT4milyylOyuQ90...
+# Token: <redacted>
 
 # 現在のトークン:
 cat ~/.cloudflared/cert.pem
-# Token: P1I42eS8tYSSL3aoLAcPZJ_TB...
+# Token: <redacted>
 ```
 バックアップファイルは2025-07-29 01:44:51に作成。
 
@@ -488,6 +569,87 @@ DNS変更には連鎖的な影響がある - 証明書だけでなく認証ト�
 - 設定ファイルの更新
 
 システム変更を行う際は、コンポーネント間の依存関係を常に考慮。大きな変更の前にすべてをバックアップ。次のステップに進む前に各ステップを検証。
+
+---
+
+## 問題4：VPN全面停止 - 証明書期限切れとクライアント破損
+
+### タイムライン
+**2026年9月** - VPNが完全に使用不能に。2つの独立した障害が同時に発生し、原因の切り分けが非常に難しくなった。
+
+### 症状
+macOSクライアント（Hiddify）が起動しない：
+```
+failed to start core / no such file Working/configs/*.json
+127.0.0.1:59202 refused
+```
+さらに、他の経路からの接続もつながったりつながらなかったりする状態。
+
+### 根本原因
+**障害1 - クライアント：Hiddifyのビルド破損**
+インストールされていたのはMac App StoreのCatalyst移植版（`apple.hiddify.com~iosmac`、「Not verified for macOS」表記）。macOSがコンパイル済み設定キャッシュを削除したため、コアが起動できなくなっていた。
+
+**障害2 - サーバー：TLS証明書の期限切れ**
+クライアントを介さず、ローカルでサービスを直接確認：
+```bash
+curl -vk https://127.0.0.1:8443
+# expire date: <過去の日付>
+# HTTP/1.1 400 Bad Request
+# sec-websocket-version: 13
+```
+証明書は期限切れだったが、`sec-websocket-version: 13` ヘッダーによりXray自体は生きていることが確認できた。「サービスが落ちている」という仮説を排除し、証明書レイヤーに絞り込めた。
+
+真の原因：acme.shがDNS検証に使うCloudflare APIトークン（`CF_Token`）が無効になっていた。**自動更新は静かに失敗し続け**、証明書が期限切れになるまで誰も気づかなかった。
+
+**紛らわしかった要素**
+- 残っていたsystemd管理のXrayサービス（無効化済み）
+- 孤立した `/usr/bin/xray` プロセス
+
+どのXrayが実際に通信を処理しているのか、しばらく判断がつかなかった。最終的にDockerコンテナ内のXrayが本物と確認し、冗長なものは削除した。
+
+### 解決策
+**クライアント：**
+```bash
+# App StoreのCatalyst版を削除し、GitHub公式リリース（.dmg、v4.1.1）をインストール
+xattr -dr com.apple.quarantine /Applications/Hiddify.app
+```
+
+**サーバー：**
+```bash
+# 1. Cloudflareで新しいAPIトークンを作成（Zone:DNS:Edit + Zone:Zone:Read）
+#    acme.shのCF_Tokenを更新
+# 2. 強制更新
+acme.sh --renew -d vpn.example.com --force
+# 3. Le_ReloadCmdによりコンテナが自動再起動
+#    (docker restart xray)
+```
+証明書の更新に成功し、Xrayに反映された。
+
+### セキュリティ強化
+修正中に、VPNのUUIDを過去にチャットアプリへ誤って投稿していたことに気づいた（メッセージは後で削除済み）。**メッセージを削除しても漏洩はなかったことにならない**ため、UUIDをローテーションし、古いものを無効化した。
+
+### 結果
+
+| 項目 | 修正前 | 修正後 |
+|---|---|---|
+| クライアント | Catalyst移植版、コア起動不可 | GitHub公式リリース、正常動作 |
+| サーバー証明書 | 期限切れ | 更新済み、自動更新復旧 |
+| Xrayプロセス | 冗長・孤立インスタンス | 単一インスタンス（Dockerコンテナ） |
+| VPN認証情報（UUID） | 過去に露出 | ローテーション済み |
+
+### 学んだこと
+1. **2つの障害が重なったら、まず変数を分離する。** 単一原因と決めつけず、クライアントとサーバーを別々に検証する。ローカルポートへの `curl` でクライアントを切り離せる。
+2. **静かに失敗する自動化が最も危険。** acme.shの更新失敗はアラートを一切出さなかった。自動化には成功時だけでなく失敗時の通知が必要。
+3. **漏洩した認証情報は削除ではなくローテーションする。** 露出が疑われた時点で、ローテーションが唯一確実な対処。
+4. **配布チャネルが信頼境界を決める。** 同じオープンソースクライアントでも、GitHub公式リリースとサードパーティのApp Store移植版では信頼性が根本的に異なりうる。セキュリティツールでは特に重要。
+
+### 今後の対応
+- [ ] Cloudflare Tunnelトークンのローテーション（認証情報の衛生管理）
+- [ ] Xray / cloudflared の自動起動設定（`restart: unless-stopped` / `systemctl enable`）
+- [ ] 新しいトークンでacme.shの更新cronが正常に動くか検証
+- [ ] 証明書期限のN日前チェックと通知
+- [ ] Cloudflareに依存しないバックアップ経路（Xray Reality）
+- [ ] サーバー認証情報（トークン、UUID、SSH）をパスワードマネージャーに移行
 
 ---
 
@@ -566,7 +728,7 @@ echo "$(date): [問題の説明]" >> ~/troubleshooting.log
 - 本番環境への適用前にステージングでテスト
 
 ### 監視の設定
-- 証明書有効期限アラート（30日前）
+- 証明書有効期限アラート（30日前） - **計画中、未導入。** 問題4はまさに更新が静かに失敗したことが原因。
 - Cloudflare Tunnelヘルスチェック
 - コンテナ再起動回数の監視
 - 週次ログレビュー
@@ -577,7 +739,7 @@ echo "$(date): [問題の説明]" >> ~/troubleshooting.log
 
 最大の教訓は、特定の技術的解決策ではない。詳細なログを失ったことで、ドキュメンテーションの重要性を学んだ。
 
-6ヶ月で30以上の問題に遭遇したが、完全な証拠があるのは3つのみ。残りはbash履歴の制限とログローテーションで失われた。これ自体が本番運用における貴重な教訓。
+最初の6ヶ月で30以上の問題に遭遇したが、完全な証拠があるのは3つのみ。残りはbash履歴の制限とログローテーションで失われた。これ自体が本番運用における貴重な教訓。
 
 今後のプロジェクトでは、初日からドキュメント作成を優先する。他の人のためだけでなく、なぜそのような方法を取ったか覚えていない「未来の自分」のためにも。
 

@@ -122,12 +122,14 @@ Started with just a firewall. Then:
 
 ## Operational Experience
 
-### Maintaining 99.8% Uptime
+### Uptime in the First 3 Months
 
-**The numbers:**
+**The numbers (Aug–Nov 2025):**
 - 3 months × 30 days × 24 hours = 2,160 hours
 - Downtime: ~8 hours (all planned maintenance)
 - Unplanned outages: 0 (got lucky)
+
+That luck didn't last: in 2026 an expired TLS certificate caused a full outage. See [Troubleshooting – Issue 4](troubleshooting.md#issue-4-full-vpn-outage---expired-certificate--broken-client).
 
 **What "maintenance" actually means:**
 - Not just "run apt update and pray"
@@ -482,12 +484,14 @@ WAF（Webアプリケーションファイアウォール）が自分のVPN接�
 
 ## 運用経験
 
-### 99.8%稼働率の維持
+### 最初の3ヶ月の稼働状況
 
-**数字:**
+**数字（2025年8月〜11月）:**
 - 3ヶ月 × 30日 × 24時間 = 2,160時間
 - ダウンタイム: 約8時間（すべて計画メンテナンス）
 - 計画外停止: 0（運が良かった）
+
+この幸運は続かなかった：2026年、TLS証明書の期限切れにより全面停止が発生。[トラブルシューティング – 問題4](troubleshooting.md#問題4vpn全面停止---証明書期限切れとクライアント破損)を参照。
 
 **「メンテナンス」の実際の意味:**
 - 単に「apt updateして祈る」ではない

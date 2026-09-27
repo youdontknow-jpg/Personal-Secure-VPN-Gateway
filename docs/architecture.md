@@ -9,7 +9,7 @@ Detailed explanation of why this VPN architecture was chosen and how it works.
 ```
 Client Device
    ↓
-Cloudflare Domain (vpn.fujilegend.xyz)
+Cloudflare Domain (vpn.example.com)
    ↓
 Cloudflare Tunnel (TLS 1.3 encryption)
    ↓
@@ -169,7 +169,7 @@ Traditional VPN installations:
 
 **What network inspectors see:**
 
-1. **DNS query** - `vpn.fujilegend.xyz` (looks like normal domain)
+1. **DNS query** - `vpn.example.com` (looks like normal domain)
 2. **TLS handshake** - Standard HTTPS connection to Cloudflare
 3. **HTTP upgrade** - WebSocket upgrade request (used by many web apps)
 4. **Encrypted data** - TLS-encrypted WebSocket frames
