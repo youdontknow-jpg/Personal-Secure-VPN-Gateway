@@ -1,6 +1,6 @@
 # What I Learned
 
-Reflection on 3+ months of building and running a production VPN. This wasn't just a weekend project – it's been a continuous learning experience with plenty of mistakes along the way.
+Reflection on building and running a self-hosted VPN since August 2025. This wasn't just a weekend project – it's been a continuous learning experience with plenty of mistakes along the way.
 
 ---
 
@@ -92,7 +92,7 @@ Started with just a firewall. Then:
 - Week 2: Added Fail2Ban after seeing 200+ SSH brute-force attempts
 - Month 1: Realized certificate expiration is a thing (service went down)
 - Month 3: Learned about log monitoring (disk was full)
-- Month 5: Finally understood why defense in depth matters
+- Month 3: Finally understood why defense in depth matters
 
 **Mistakes that taught me:**
 1. **Locked myself out twice**
@@ -122,12 +122,14 @@ Started with just a firewall. Then:
 
 ## Operational Experience
 
-### Maintaining 99.8% Uptime
+### Uptime in the First 3 Months
 
-**The numbers:**
+**The numbers (Aug–Nov 2025):**
 - 3 months × 30 days × 24 hours = 2,160 hours
-- Downtime: ~8 hours (all planned maintenance)
-- Unplanned outages: 0 (got lucky)
+- Planned maintenance: ~8 hours
+- Unplanned: the 2 AM certificate expiry described above (~2 hours)
+
+2026 was worse - two full outages: an expired certificate plus a broken client ([Issue 4](troubleshooting.md#issue-4-full-vpn-outage---expired-certificate--broken-client)), and a server frozen by leftover services in a restart loop ([Issue 5](troubleshooting.md#issue-5-server-frozen-by-a-restart-loop-of-leftover-services)). Both involved a certificate renewal that failed silently.
 
 **What "maintenance" actually means:**
 - Not just "run apt update and pray"
@@ -251,7 +253,7 @@ Had backups. Never tested restoring them. When I finally did (for practice), dis
 
 **What interviews might ask:**
 - "Tell me about a technical challenge you overcame"
-  → Have 6 real troubleshooting stories
+  → Have 8 real troubleshooting stories
 - "How do you approach learning new technologies?"
   → This project shows self-directed learning
 - "Describe your problem-solving process"
@@ -265,14 +267,14 @@ Had backups. Never tested restoring them. When I finally did (for practice), dis
 
 ### Certifications Alignment
 
-**Network+ (Dec 2025):**
-This project is practical application of:
+**CCNA (currently studying):**
+Skipped Network+ and went straight to CCNA. This project is practical application of:
 - OSI model layers
 - TCP/IP protocols
 - Network troubleshooting methodology
 - Security best practices
 
-**Security+ (planned Q1 2026):**
+**Security+ (later):**
 Directly relevant experience with:
 - Defense in depth
 - Cryptography (TLS)
@@ -285,7 +287,7 @@ Directly relevant experience with:
 
 ### Short-term (keeping it real)
 
-**Before Network+ exam:**
+**While studying for CCNA:**
 - No major changes to VPN (stability > features)
 - Focus on exam preparation
 - Maybe add basic monitoring (if time permits)
@@ -295,20 +297,18 @@ I want to add Prometheus, Grafana, better access control, redundancy... but real
 
 ---
 
-### Long-term (after certifications)
+### Long-term (no fixed dates)
 
-**Q2 2026 (after Network+):**
-- Phase 1: Monitoring (Prometheus + Grafana)
+**Phase 1: Monitoring (Prometheus + Grafana)**
+- Certificate expiry alerts first - the lesson from two outages
 - Actually learn how to read metrics properly
 - Set up alerts that aren't annoying
 
-**Q3 2026 (after Security+):**
-- Phase 2: Better access control
+**Phase 2: Better access control**
 - Per-device authentication
-- Maybe Cloudflare Access integration
+- Cloudflare Access is already in front of SSH - extend the same idea to other services
 
-**Q4 2026 (after CCNA):**
-- Phase 3: Redundancy and failover
+**Phase 3: Redundancy and failover**
 - Second instance on different hardware
 - Load balancing (if I can figure it out)
 
@@ -351,8 +351,8 @@ This wasn't just about building a VPN. It was about learning how to learn, how t
 
 ---
 
-**Last updated:** November 21, 2025  
-**Total time invested:** ~80 hours over 3 months  
+**Last updated:** September 27, 2026  
+**Total time invested:** ~80 hours in the first 3 months (not counted since)  
 **Would I do it again?** Absolutely. Mistakes and all.
 
 ---
@@ -360,7 +360,7 @@ This wasn't just about building a VPN. It was about learning how to learn, how t
 
 # 日本語版
 
-3ヶ月以上の本番VPN構築と運用から学んだこと。これは週末プロジェクトではなく、多くの失敗を伴う継続的な学習体験でした。
+2025年8月から続けているセルフホストVPNの構築と運用から学んだこと。これは週末プロジェクトではなく、多くの失敗を伴う継続的な学習体験でした。
 
 ---
 
@@ -482,12 +482,14 @@ WAF（Webアプリケーションファイアウォール）が自分のVPN接�
 
 ## 運用経験
 
-### 99.8%稼働率の維持
+### 最初の3ヶ月の稼働状況
 
-**数字:**
+**数字（2025年8月〜11月）:**
 - 3ヶ月 × 30日 × 24時間 = 2,160時間
-- ダウンタイム: 約8時間（すべて計画メンテナンス）
-- 計画外停止: 0（運が良かった）
+- 計画メンテナンス: 約8時間
+- 計画外: 上記の午前2時の証明書期限切れ（約2時間）
+
+2026年はさらに悪かった - 全面停止が2回：証明書期限切れとクライアント破損（[問題4](troubleshooting.md#問題4vpn全面停止---証明書期限切れとクライアント破損)）、残存サービスの再起動ループによるサーバー停止（[問題5](troubleshooting.md#問題5残存サービスの再起動ループでサーバーが停止)）。どちらも証明書の更新が静かに失敗していた。
 
 **「メンテナンス」の実際の意味:**
 - 単に「apt updateして祈る」ではない
@@ -531,7 +533,7 @@ WAF（Webアプリケーションファイアウォール）が自分のVPN接�
 
 **面接で聞かれるかもしれないこと:**
 - 「克服した技術的課題を教えてください」
-  → 6つの実際のトラブルシューティングストーリーがある
+  → 8つの実際のトラブルシューティングストーリーがある
 - 「新しい技術をどう学びますか？」
   → このプロジェクトが自主学習を示す
 - 「問題解決プロセスを説明してください」
@@ -549,7 +551,7 @@ WAF（Webアプリケーションファイアウォール）が自分のVPN接�
 
 ### 短期（現実的に）
 
-**Network+試験前:**
+**CCNA学習中:**
 - VPNへの大きな変更なし（安定性 > 機能）
 - 試験準備に集中
 - 時間があれば基本的な監視を追加
@@ -559,20 +561,18 @@ Prometheus、Grafana、より良いアクセス制御、冗長性を追加した
 
 ---
 
-### 長期（資格取得後）
+### 長期（日付は未定）
 
-**2026年Q2（Network+後）:**
-- フェーズ1: 監視（Prometheus + Grafana）
+**フェーズ1: 監視（Prometheus + Grafana）**
+- まず証明書期限アラート - 2回の障害からの教訓
 - メトリクスの適切な読み方を実際に学ぶ
 - 煩わしくないアラートを設定
 
-**2026年Q3（Security+後）:**
-- フェーズ2: より良いアクセス制御
+**フェーズ2: より良いアクセス制御**
 - デバイスごとの認証
-- Cloudflare Access統合かも
+- Cloudflare AccessはすでにSSHの前段に導入済み - 同じ考え方を他のサービスにも広げる
 
-**2026年Q4（CCNA後）:**
-- フェーズ3: 冗長性とフェイルオーバー
+**フェーズ3: 冗長性とフェイルオーバー**
 - 別ハードウェアに2つ目のインスタンス
 - ロードバランシング（理解できれば）
 
@@ -615,6 +615,6 @@ Prometheus、Grafana、より良いアクセス制御、冗長性を追加した
 
 ---
 
-**最終更新:** 2025年11月21日  
-**投資した総時間:** 3ヶ月で約80時間  
+**最終更新:** 2026年9月27日  
+**投資した総時間:** 最初の3ヶ月で約80時間（以降は未集計）  
 **また同じことをするか?** 絶対に。ミスも含めて。

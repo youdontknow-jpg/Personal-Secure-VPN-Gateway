@@ -1,4 +1,6 @@
-# Cloudflare Tunnel Configuration
+# Cloudflare Tunnel Configuration (locally-managed tunnel)
+# Note: my own server runs cloudflared in token mode (tunnel managed from the
+# Cloudflare dashboard), where ingress rules live in the dashboard instead of here.
 # Replace YOUR_TUNNEL_ID with actual tunnel ID from: cloudflared tunnel create
 
 tunnel: YOUR_TUNNEL_ID

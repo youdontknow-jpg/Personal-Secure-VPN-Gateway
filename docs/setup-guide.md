@@ -297,7 +297,8 @@ sudo apt install -y ufw
 # Allow SSH (important! Don't lock yourself out)
 sudo ufw allow 22/tcp
 
-# Allow HTTP (for certificate renewal)
+# Allow HTTP (only needed for HTTP-01 validation -
+# not required when using DNS validation with dns_cf as in Step 3)
 sudo ufw allow 80/tcp
 
 # Allow HTTPS (for general web access)
@@ -385,7 +386,15 @@ acme.sh --install-cert -d vpn.yourdomain.com \
 # Check cron
 crontab -l | grep acme
 
-# Should show daily renewal check
+# Should show exactly ONE daily renewal check
+```
+
+**Don't discard the output.** acme.sh installs its cron job with `> /dev/null`, so a failed renewal leaves no trace - that is how my certificate expired twice ([Issue 4](troubleshooting.md#issue-4-full-vpn-outage---expired-certificate--broken-client), [Issue 5](troubleshooting.md#issue-5-server-frozen-by-a-restart-loop-of-leftover-services)). Send it to a log file instead:
+
+```bash
+crontab -l | grep -v 'acme.sh --cron' > /tmp/cron.new
+echo '7 17 * * * "$HOME/.acme.sh"/acme.sh --cron --home "$HOME/.acme.sh" >> "$HOME/.acme.sh/cron.log" 2>&1' >> /tmp/cron.new
+crontab /tmp/cron.new
 ```
 
 ### Test Renewal

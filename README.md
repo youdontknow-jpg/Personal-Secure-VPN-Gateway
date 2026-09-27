@@ -2,7 +2,7 @@
 
 Production VPN gateway with anti-censorship capabilities using Xray and Cloudflare Tunnel.
 
-**Status:** In production since August 2025 (3+ months, 99.8% uptime)  
+**Status:** In daily use since August 2025. Not always up - real outages are documented in [Troubleshooting](docs/troubleshooting.md).  
 **Purpose:** Secure remote access to home network with traffic obfuscation to bypass restrictive firewalls
 
 📖 **[日本語版はこちら](#日本語版)**
@@ -15,12 +15,14 @@ Production VPN gateway with anti-censorship capabilities using Xray and Cloudfla
 - **Traffic obfuscation** - WebSocket over TLS disguises VPN traffic as regular HTTPS browsing
 - **Anti-censorship** - Bypasses deep packet inspection (DPI) and restrictive network filters
 - **Containerized** - Docker deployment for easy management and reproducibility
-- **Production-ready** - 3+ months stable operation, 99.8% uptime
+- **Zero Trust SSH** - Admin SSH goes through Cloudflare Access (Google login + 2FA) over the same tunnel, no SSH port exposed to the internet
+- **Battle-tested** - Running since August 2025, including recovery from two full outages
 
 ## Architecture
 
 ```
-Client → Cloudflare CDN → Cloudflare Tunnel → cloudflared → Docker (Xray) → Home Network
+VPN:   Client → Cloudflare CDN → Cloudflare Tunnel → cloudflared → Docker (Xray) → Home Network
+Admin: ssh → Cloudflare Access (Google + 2FA) → same tunnel → SSH on the server
 ```
 
 All traffic encrypted with TLS 1.3, WebSocket protocol masks VPN signatures from network inspection.
@@ -35,6 +37,7 @@ All traffic encrypted with TLS 1.3, WebSocket protocol masks VPN signatures from
 | VPN Protocol | Xray (VLESS) | WebSocket-based tunnel with traffic obfuscation |
 | Container | Docker | Service isolation and management |
 | Firewall | UFW + Fail2Ban | Host-level security |
+| Admin access | Cloudflare Access | Google login + 2FA in front of SSH |
 
 ## Quick Start
 
@@ -69,11 +72,11 @@ All sensitive values (UUIDs, domain names, tunnel IDs) are replaced with placeho
 
 ## Performance
 
-**Measured over 3+ months of production use:**
+**Measured in daily use:**
 
 - **Latency:** 30-50ms total (10-20ms Cloudflare overhead)
 - **Throughput:** 150-250 Mbps download, 80-120 Mbps upload
-- **Reliability:** 99.8% uptime, only downtime from planned maintenance
+- **Reliability:** Stable for the first ~3 months. Two full unplanned outages in 2026: an expired certificate plus a broken client ([Issue 4](docs/troubleshooting.md#issue-4-full-vpn-outage---expired-certificate--broken-client)), and a server frozen by leftover services in a restart loop ([Issue 5](docs/troubleshooting.md#issue-5-server-frozen-by-a-restart-loop-of-leftover-services))
 - **Anti-censorship:** Successfully maintained connectivity in restrictive network environments
 
 ## Documentation
@@ -93,12 +96,22 @@ All sensitive values (UUIDs, domain names, tunnel IDs) are replaced with placeho
 - Network security fundamentals (defense in depth, firewall design)
 
 **Operational experience:**
-- Maintained production service for 3+ months
-- Troubleshot and resolved 6+ major issues
+- Maintained a self-hosted service since August 2025
+- Troubleshot and resolved 8+ major issues, including two full outages
+- Recovered a frozen server via GRUB recovery mode and traced it to a systemd restart loop
+- Rotated credentials after suspected exposure
 - Managed TLS certificates and service updates
 - Optimized for various network conditions
 
 **[📙 Detailed Learning Reflections](docs/what-i-learned.md)**
+
+## Current Status (September 2026)
+
+- ✅ Xray (Docker, `restart: unless-stopped`) and cloudflared (systemd, enabled) running - auto-start on boot verified
+- ✅ TLS certificate valid until December 26, 2026
+- ✅ Leftover Hiddify services removed, journal capped at 500M ([Issue 5](docs/troubleshooting.md#issue-5-server-frozen-by-a-restart-loop-of-leftover-services))
+- ✅ VPN UUID rotated after suspected exposure ([Issue 4](docs/troubleshooting.md#issue-4-full-vpn-outage---expired-certificate--broken-client))
+- ⚠️ No certificate expiry alert yet - both 2026 outages involved a certificate that expired without warning
 
 ## Current Limitations
 
@@ -109,9 +122,16 @@ This is a learning project and I'm aware of its limitations:
 - Single point of failure (one Docker container)
 - Limited traffic analysis protection
 
-**Planned improvements:** Phased roadmap (Q1-Q4 2026) for monitoring, access control, redundancy, and advanced anti-censorship features.
+## Roadmap
 
-**Why not now:** Currently focused on Network+ certification (exam Dec 28, 2025), and current setup has proven stable over 3+ months of testing.
+- [x] Auto-start Xray / cloudflared on boot (verified after Issue 5)
+- [ ] Certificate expiry alerting (the lesson from Issues 4 and 5)
+- [ ] Log acme.sh cron output instead of discarding it
+- [ ] Rotate Cloudflare Tunnel token
+- [ ] Backup route independent of Cloudflare (Xray Reality)
+- [ ] Per-device access control
+- [ ] Move server credentials into a password manager
+- [ ] Basic monitoring (Prometheus + Grafana) - still learning how to use it
 
 ## References
 
@@ -128,7 +148,7 @@ MIT License - Configuration files and documentation are free to use and modify.
 
 ---
 
-**Last updated:** November 21, 2025
+**Last updated:** September 27, 2026
 
 ---
 ---
@@ -137,7 +157,7 @@ MIT License - Configuration files and documentation are free to use and modify.
 
 Xray と Cloudflare Tunnel を使った反検閲機能付き本番稼働 VPN ゲートウェイ。
 
-**運用状況:** 2025年8月から本番稼働中（3ヶ月以上、稼働率 99.8%）  
+**運用状況:** 2025年8月から日常的に使用中。常に稼働していたわけではなく、実際の障害は[トラブルシューティング](docs/troubleshooting.md)に記録。  
 **目的:** 制限的なファイアウォールを回避するトラフィック難読化機能付き自宅ネットワークへの安全なリモートアクセス
 
 ---
@@ -148,12 +168,14 @@ Xray と Cloudflare Tunnel を使った反検閲機能付き本番稼働 VPN ゲ
 - **トラフィック難読化** - WebSocket over TLS で VPN トラフィックを通常の HTTPS 閲覧に偽装
 - **反検閲** - Deep Packet Inspection (DPI) と制限的なネットワークフィルタを回避
 - **コンテナ化** - 容易な管理と再現性のための Docker デプロイ
-- **本番環境対応** - 6ヶ月以上安定稼働、稼働率 99.8%
+- **ゼロトラスト SSH** - 管理用 SSH は同じトンネル上で Cloudflare Access（Google ログイン + 2FA）を経由、SSH ポートはインターネットに非公開
+- **実戦で検証済み** - 2025年8月から稼働、2回の全面停止からの復旧経験あり
 
 ## システム構成
 
 ```
-クライアント → Cloudflare CDN → Cloudflare Tunnel → cloudflared → Docker (Xray) → 自宅ネットワーク
+VPN:  クライアント → Cloudflare CDN → Cloudflare Tunnel → cloudflared → Docker (Xray) → 自宅ネットワーク
+管理: ssh → Cloudflare Access（Google + 2FA）→ 同じトンネル → サーバーの SSH
 ```
 
 すべてのトラフィックは TLS 1.3 で暗号化、WebSocket プロトコルがネットワーク検査から VPN シグネチャを隠蔽。
@@ -168,6 +190,7 @@ Xray と Cloudflare Tunnel を使った反検閲機能付き本番稼働 VPN ゲ
 | VPN プロトコル | Xray (VLESS) | WebSocket ベースのトンネル、トラフィック難読化機能付き |
 | コンテナ | Docker | サービス分離と管理 |
 | ファイアウォール | UFW + Fail2Ban | ホストレベルのセキュリティ |
+| 管理アクセス | Cloudflare Access | SSH の前段で Google ログイン + 2FA |
 
 ## クイックスタート
 
@@ -202,11 +225,11 @@ cloudflared tunnel run my-vpn
 
 ## パフォーマンス
 
-**6ヶ月以上の本番運用で測定:**
+**日常使用で測定:**
 
 - **レイテンシ:** 合計 30-50ms（Cloudflare オーバーヘッド 10-20ms）
 - **スループット:** ダウンロード 150-250 Mbps、アップロード 80-120 Mbps
-- **信頼性:** 稼働率 99-%、ダウンタイムは計画メンテナンスのみ
+- **信頼性:** 最初の約3ヶ月は安定稼働。2026年に計画外の全面停止が2回発生：証明書期限切れとクライアント破損（[問題4](docs/troubleshooting.md#問題4vpn全面停止---証明書期限切れとクライアント破損)）、残存サービスの再起動ループによるサーバー停止（[問題5](docs/troubleshooting.md#問題5残存サービスの再起動ループでサーバーが停止)）
 - **反検閲:** 制限的なネットワーク環境で接続を正常に維持
 
 ## ドキュメント
@@ -226,12 +249,22 @@ cloudflared tunnel run my-vpn
 - ネットワークセキュリティ基礎（多層防御、ファイアウォール設計）
 
 **運用経験:**
-- 3ヶ月以上の本番サービス維持
-- 6つ以上の主要問題のトラブルシューティングと解決
+- 2025年8月からセルフホストサービスを維持
+- 8つ以上の主要問題を解決（2回の全面停止を含む）
+- GRUB リカバリーモードで停止したサーバーを復旧し、systemd の再起動ループを原因として特定
+- 露出が疑われた認証情報のローテーション
 - TLS 証明書とサービス更新の管理
 - 様々なネットワーク条件に最適化
 
 **[📙 詳細な学習の振り返り](docs/what-i-learned.md)**
+
+## 現在の状況（2026年9月）
+
+- ✅ Xray（Docker、`restart: unless-stopped`）と cloudflared（systemd、有効）が稼働中 - 起動時の自動起動を確認済み
+- ✅ TLS 証明書は2026年12月26日まで有効
+- ✅ Hiddify の残存サービスを削除、ジャーナルを500Mに制限（[問題5](docs/troubleshooting.md#問題5残存サービスの再起動ループでサーバーが停止)）
+- ✅ 露出が疑われた VPN UUID をローテーション済み（[問題4](docs/troubleshooting.md#問題4vpn全面停止---証明書期限切れとクライアント破損)）
+- ⚠️ 証明書期限アラートは未導入 - 2026年の2回の障害はどちらも警告なしで期限切れになった証明書が関係
 
 ## 現在の限界
 
@@ -242,9 +275,16 @@ cloudflared tunnel run my-vpn
 - 単一障害点（1つの Docker コンテナ）
 - 限定的なトラフィック分析保護
 
-**改善計画:** 監視、アクセス制御、冗長性、高度な反検閲機能のための段階的ロードマップ（2026年 Q1-Q4）。
+## ロードマップ
 
-**なぜ今ではないのか:** 現在は Network+ 資格取得に集中中（試験 2025年12月28日）、そして現在の構成は 6ヶ月以上のテストで安定性を証明済み。
+- [x] Xray / cloudflared の自動起動（問題5の後に確認済み）
+- [ ] 証明書期限切れアラート（問題4・5の教訓）
+- [ ] acme.sh の cron 出力を捨てずにログに残す
+- [ ] Cloudflare Tunnel トークンのローテーション
+- [ ] Cloudflare に依存しないバックアップ経路（Xray Reality）
+- [ ] デバイスごとのアクセス制御
+- [ ] サーバー認証情報をパスワードマネージャーに移行
+- [ ] 基本的な監視（Prometheus + Grafana）- 使い方を学習中
 
 ## 参考資料
 
@@ -261,4 +301,4 @@ MIT License - 設定ファイルと文書は自由に使用・修正可能。
 
 ---
 
-**最終更新:** 2025年11月21日
+**最終更新:** 2026年9月27日
