@@ -267,13 +267,6 @@ Had backups. Never tested restoring them. When I finally did (for practice), dis
 
 ### Certifications Alignment
 
-**CCNA (currently studying):**
-Skipped Network+ and went straight to CCNA. This project is practical application of:
-- OSI model layers
-- TCP/IP protocols
-- Network troubleshooting methodology
-- Security best practices
-
 **Security+ (later):**
 Directly relevant experience with:
 - Defense in depth

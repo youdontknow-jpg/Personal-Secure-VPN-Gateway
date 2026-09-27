@@ -285,7 +285,7 @@ Tested in:
 
 **Honest assessment:**
 
-1. **Learning priority** - Currently studying for CCNA
+1. **Time** - Currently studying for CCNA, so less time for this project
 2. **Basics first** - The 2026 outages came from missing alerts and incomplete cleanup, not missing features
 3. **Understanding before complexity** - Want to master Zero-Trust principles before implementing more
 4. **Risk management** - Every new component is another thing that can fail quietly
