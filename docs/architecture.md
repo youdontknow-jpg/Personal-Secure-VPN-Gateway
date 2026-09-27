@@ -199,24 +199,26 @@ Tested in:
 
 ### Hardware Specifications
 
-- **Host:** Repurposed Fujitsu PC (2014 model)
-- **CPU:** Intel Core i5 (sufficient for VPN workload)
-- **RAM:** 8GB total, 1GB allocated to Docker container
-- **Storage:** 120GB SSD
+- **Host:** Repurposed Fujitsu PC
+- **CPU:** Intel Core i5-6200U @ 2.30GHz (sufficient for VPN workload)
+- **RAM:** 12GB (about 660MB in use at idle after a reboot)
+- **Storage:** 240GB SSD (Kingston A400)
 - **Network:** WiFi connection to home router (1Gbps fiber)
 
 ### Software Stack
 
-- **OS:** Ubuntu 22.04 LTS
-- **Container Runtime:** Docker 24.x
+*(checked September 2026)*
+
+- **OS:** Ubuntu 22.04.5 LTS (kernel 5.15)
+- **Container Runtime:** Docker 29.1
 - **Xray Image:** teddysun/xray:latest (actively maintained)
-- **cloudflared:** Latest stable release
+- **cloudflared:** 2026.5.2, token mode, managed by systemd
 
 ### Resource Usage (Typical)
 
 - **CPU:** 1-2% average, 5-10% peak
 - **RAM:** 200-300MB (Docker container)
-- **Disk:** Logs rotate automatically, <1GB total
+- **Disk:** systemd journal capped at 500MB (it once grew to 3.9GB - see [Issue 5](troubleshooting.md#issue-5-server-frozen-by-a-restart-loop-of-leftover-services))
 - **Network:** Depends on client usage
 
 ---
