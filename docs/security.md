@@ -9,15 +9,14 @@ Current security implementation, known limitations, and planned improvements.
 ### Network Layer Protection
 
 **Firewall (UFW):**
-- Only essential ports exposed: 22 (SSH), 80 (HTTP), 443 (HTTPS)
-- All ports exposed to localhost only
+- Host firewall allows only essential ports (22, 80, 443) - none of them are forwarded on the home router, so they are reachable from the LAN only
 - Default deny policy for inbound traffic
-- VPN port (8443) not exposed externally
+- VPN port (8443) bound to 127.0.0.1, reachable only through cloudflared
 
 **Intrusion Prevention (Fail2Ban):**
 - Monitors SSH login attempts
 - Automatically blocks IPs after repeated failures
-- Running for 3+ months, blocked 200+ malicious IPs
+- Running since 2025, blocked 200+ malicious IPs
 
 **Zero Port Forwarding:**
 - No ports opened on home router
@@ -26,8 +25,12 @@ Current security implementation, known limitations, and planned improvements.
 
 ### Authentication Layer
 
+**Cloudflare Access for SSH:**
+- Remote SSH goes through Cloudflare Access (Google login + 2FA) before it reaches the tunnel
+- No SSH port exposed to the internet
+
 **UUID-Based Authentication:**
-- Each client requires unique UUID (similar to API key)
+- Clients authenticate with a UUID (similar to an API key) - currently one UUID shared by all devices (see Known Limitations)
 - 128-bit random identifier
 - No username/password system to brute-force
 
@@ -59,9 +62,9 @@ Current security implementation, known limitations, and planned improvements.
 ### Container Isolation
 
 **Docker Security:**
-- Container runs without root capabilities
-- Limited system call access
+- Default Docker isolation (namespaces, default seccomp profile)
 - Separate network namespace from host
+- Not configured yet: non-root user / dropped capabilities (planned)
 
 **Read-Only Mounts:**
 - Configuration files mounted read-only
@@ -140,7 +143,7 @@ This is a learning project. I'm aware of these security limitations:
 
 **Mitigation (current):**
 - Limit UUID sharing to trusted devices only
-- Regular UUID rotation (every 3-3 months)
+- UUID rotated after suspected exposure (2026); no fixed rotation schedule yet
 - Monitor logs for suspicious activity
 
 #### 2. Limited Traffic Analysis Protection
@@ -190,9 +193,8 @@ This is a learning project. I'm aware of these security limitations:
 - No high availability
 
 **Mitigation (current):**
-- Docker restart policy (unless-stopped)
-- Health check monitoring script
-- Fast recovery time (< 1 minute)
+- Docker restart policy (unless-stopped) and cloudflared enabled in systemd - auto-start verified after [Issue 5](troubleshooting.md#issue-5-server-frozen-by-a-restart-loop-of-leftover-services)
+- No external health check yet - both 2026 outages were noticed by me, not by an alert
 
 #### 5. Cloudflare Dependency
 
@@ -239,7 +241,7 @@ This is a learning project. I'm aware of these security limitations:
 
 ## Planned Improvements
 
-### Phase 1: Enhanced Monitoring (Q1 2026)
+### Phase 1: Enhanced Monitoring
 
 **Goals:**
 - Better visibility into system behavior
@@ -247,6 +249,7 @@ This is a learning project. I'm aware of these security limitations:
 - Performance metrics tracking
 
 **Implementation:**
+- Certificate expiry alerts (highest priority - see Issues 4 and 5)
 - Prometheus metrics collection from Xray and Docker
 - Grafana dashboards for visualization
 - Automated alerting (email/Telegram) for anomalies
@@ -254,7 +257,7 @@ This is a learning project. I'm aware of these security limitations:
 
 **Security benefit:** Detect attacks and issues faster
 
-### Phase 2: Advanced Access Control (Q2 2026)
+### Phase 2: Advanced Access Control
 
 **Goals:**
 - Per-device authentication
@@ -262,14 +265,14 @@ This is a learning project. I'm aware of these security limitations:
 - Identity-based authorization
 
 **Implementation:**
-- Cloudflare Access for identity-based auth (email/GitHub login)
+- Extend Cloudflare Access (already used for SSH) to other services
 - Multiple UUIDs for different devices
 - iptables rules for service-level restrictions
 - Separate VLANs for different access levels
 
 **Security benefit:** Principle of least privilege, device revocation
 
-### Phase 3: Redundancy & Failover (Q3 2026)
+### Phase 3: Redundancy & Failover
 
 **Goals:**
 - Eliminate single point of failure
@@ -284,7 +287,7 @@ This is a learning project. I'm aware of these security limitations:
 
 **Security benefit:** High availability, resilience
 
-### Phase 4: Advanced Anti-Censorship (Q4 2026)
+### Phase 4: Advanced Anti-Censorship
 
 **Goals:**
 - Even stronger traffic obfuscation
@@ -292,6 +295,7 @@ This is a learning project. I'm aware of these security limitations:
 - Harder to detect and block
 
 **Implementation:**
+- Backup route independent of Cloudflare (Xray Reality)
 - Domain fronting techniques
 - Multiple CDN providers (not just Cloudflare)
 - Traffic randomization and dummy traffic
@@ -306,18 +310,17 @@ This is a learning project. I'm aware of these security limitations:
 **Honest assessment of priorities:**
 
 1. **Learning approach:**
-   - Want to understand Zero-Trust principles from Security+ cert
-   - Need to master advanced networking from Network+ first
+   - Currently studying for CCNA - networking fundamentals first
+   - Want to understand Zero-Trust principles properly before building more of it
    - Building knowledge foundation before complex implementations
 
-2. **Current stability:**
-   - Setup has been stable for 3+ months
-   - Zero security incidents
-   - No pressing need to change working system
+2. **Fix the basics first:**
+   - Two full outages in 2026 ([Issue 4](troubleshooting.md#issue-4-full-vpn-outage---expired-certificate--broken-client), [Issue 5](troubleshooting.md#issue-5-server-frozen-by-a-restart-loop-of-leftover-services)) came from basics, not missing features
+   - One credential exposure (UUID posted in a chat app) - handled by rotation
+   - Alerts and cleanup matter more right now than new components
 
 3. **Time management:**
-   - Currently focused on Network+ exam (Dec 28, 2025)
-   - Avoiding changes during critical exam prep period
+   - Studying for CCNA alongside running this
    - Complex implementations need focused time
 
 4. **Risk management:**
@@ -347,8 +350,8 @@ This is a learning project. I'm aware of these security limitations:
 
 ### Operational Security
 
-- **UUID rotation** every 3-3 months
-- **Certificate monitoring** (expiry alerts)
+- **UUID rotation** after suspected exposure (no fixed schedule yet)
+- **Certificate monitoring** - planned, not in place yet (see Issues 4 and 5)
 - **Log review** weekly for anomalies
 - **Configuration backup** before changes
 

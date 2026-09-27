@@ -293,7 +293,7 @@ Client → SSH → Home Server → Internet
 **Practical functionality:**
 - Access home network resources remotely
 - Acceptable performance (30-50ms, 150+ Mbps)
-- Proven stability (3+ months, 99.8% uptime)
+- Stable day-to-day operation (with real outages documented in [Troubleshooting](troubleshooting.md))
 
 ### Trade-offs Accepted
 
