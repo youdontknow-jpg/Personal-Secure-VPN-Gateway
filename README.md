@@ -126,7 +126,7 @@ This is a learning project and I'm aware of its limitations:
 
 - [x] Auto-start Xray / cloudflared on boot (verified after Issue 5)
 - [ ] Certificate expiry alerting (the lesson from Issues 4 and 5)
-- [ ] Log acme.sh cron output instead of discarding it
+- [x] Log acme.sh cron output instead of discarding it
 - [ ] Rotate Cloudflare Tunnel token
 - [ ] Backup route independent of Cloudflare (Xray Reality)
 - [ ] Per-device access control
@@ -279,7 +279,7 @@ cloudflared tunnel run my-vpn
 
 - [x] Xray / cloudflared の自動起動（問題5の後に確認済み）
 - [ ] 証明書期限切れアラート（問題4・5の教訓）
-- [ ] acme.sh の cron 出力を捨てずにログに残す
+- [x] acme.sh の cron 出力を捨てずにログに残す
 - [ ] Cloudflare Tunnel トークンのローテーション
 - [ ] Cloudflare に依存しないバックアップ経路（Xray Reality）
 - [ ] デバイスごとのアクセス制御
